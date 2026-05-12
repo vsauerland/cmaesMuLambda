@@ -1,0 +1,47 @@
+#!/bin/bash
+#SBATCH --output=parallel.out
+#SBATCH --time=00:01:59
+#SBATCH --job-name=testfunc
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=standard96s
+
+export SLURM_CPU_BIND=none
+
+echo $0
+
+# Get operational parameters form file nIter.txt
+numSessions=$(head -4 nIter.txt | tail -1 | awk '{print $1}')
+maxIter=$(head -5 nIter.txt | tail -1 | awk '{print $1}')
+nIter=$(tail -1 nIter.txt | awk '{print $1}')
+nodesPerSession=$(($SLURM_NNODES / $numSessions))
+
+# Generate machine files which contain the nodes to use by each model simulation
+MYNODES=$(srun -l bash -c 'hostname' | sort | awk '{print $2 ":96"}' | sort -u)
+for nSession in $(seq 1 $numSessions)
+do
+echo "$MYNODES" | head -n $(($nodesPerSession * $nSession)) | tail -n $nodesPerSession > hosts${nSession}.txt
+done
+
+# print scheduling informations
+echo "Running on hosts: $SLURM_NODELIST"
+echo "Running on $SLURM_NNODES nodes."
+echo "Running $SLURM_NTASKS tasks."
+echo "Using $nodesPerSession nodes for each model simulation"
+echo "Using the following nodes:"
+echo "$MYNODES"
+
+# start numSessions model simulations in parallel
+for nSession in $(seq 1 $numSessions)
+do
+	./testfunctions nIter.txt "parameters_"$nIter"_"$nSession".txt" "fitness_"$nIter"_"$nSession".txt" > "parallel_"$nIter"_"$nSession".log" &
+done
+
+wait
+
+if [ "$nIter" -lt "$maxIter" ]; then 
+	sbatch serial.job
+fi
+
+exit

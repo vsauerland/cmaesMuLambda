@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --output=serial.out
+#SBATCH --time=00:01:59
+#SBATCH --job-name=cmaes
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=standard96s
+
+export SLURM_CPU_BIND=none
+
+# print scheduling informations
+echo "Running on hosts: $SLURM_NODELIST"
+echo "Running on $SLURM_NNODES nodes."
+echo "Running $SLURM_NTASKS tasks."
+echo "Using the following nodes:"
+echo "$MYNODES"
+
+maxIter=$(head -5 nIter.txt | tail -1 | awk '{print $1}')
+nIter=$(tail -1 nIter.txt | awk '{print $1}')
+terminate=$(tail -1 nIter.txt | awk '{print $3}')
+
+./cmaes $nIter nIter.txt > serial_$nIter.log
+
+wait
