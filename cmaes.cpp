@@ -21,31 +21,50 @@ int existsFile(const char *fileName) {
     return 0;  // File does not exist
 }
 
-int writeSamples( int nI, int lambda, int N, MatrixXld arx, MatrixXld arx_feas, VectorXld isColumnOutOfBounds )
+// To switch between "record keeping in root directory" and "record keeping in genDir" 
+string makePath(const string& genDir, const string& baseName)
 {
-	for ( int j = 0; j < lambda; j++ )
-	{
-		stringstream fileName;
-		fileName << "parameters_" << ( nI + 1 ) << "_" << ( j + 1 ) << ".txt";
-		ofstream f( fileName.str().c_str() );
-		f.precision( 43 );
-		for ( int i = 0; i < N; i++ )
-		{
-			if ( isColumnOutOfBounds( j ) ) f << arx_feas( i, j ) << "\n";
-			else f << arx( i, j ) << "\n";
-		}
-		f.close();
-	}
-	return( 0 );
+    if (genDir.empty() || genDir == ".") return baseName;
+    return genDir + "/" + baseName;
 }
 
-int writeScaledSamples( int nI, int lambda, int N, VectorXld lb, VectorXld ub, MatrixXld arx, MatrixXld arx_feas, VectorXld isColumnOutOfBounds )
+void writeMuDB( const string& genDir, int nI, int N, VectorXld mu, long double sigma, MatrixXld D, MatrixXld B )
+{
+    stringstream baseName1;
+    stringstream baseName2;
+    stringstream baseName3;
+    baseName1 << "mu" << ( nI + 1 ) << ".txt";
+    baseName2 << "ew" << ( nI + 1 ) << ".txt";
+    baseName3 << "ev" << ( nI + 1 ) << ".txt";
+    string fileName1 = makePath(genDir, baseName1.str());
+    string fileName2 = makePath(genDir, baseName2.str());
+    string fileName3 = makePath(genDir, baseName3.str());
+    ofstream f1( fileName1 );
+    ofstream f2( fileName2 );
+    ofstream f3( fileName3 );
+    f1.precision( 16 );
+    f2.precision( 16 );
+    f3.precision( 16 );
+    for ( int i = 0; i < N; i++ )
+    {
+        f1 << mu( i ) << endl;
+        f2 << sigma * D( i, i ) * sigma * D( i, i ) << endl;
+        for ( int j = 0; j < N; j++ ) f3 << " " << B( i, j );
+        f3 << endl;
+    }
+    f1.close();
+    f2.close();
+    f3.close();
+}
+
+int writeScaledSamples( const string& genDir, int nI, int lambda, int N, VectorXld lb, VectorXld ub, MatrixXld arx, MatrixXld arx_feas, VectorXld isColumnOutOfBounds )
 {
 	for ( int j = 0; j < lambda; j++ )
 	{
-		stringstream fileName;
-		fileName << "parameters_" << ( nI + 1 ) << "_" << ( j + 1 ) << ".txt";
-		ofstream f( fileName.str().c_str() );
+		stringstream baseName;
+		baseName << "parameters_" << ( nI + 1 ) << "_" << ( j + 1 ) << ".txt";
+        string fileName = makePath( genDir, baseName.str() );
+		ofstream f( fileName );
 		f.precision( 43 );
 		for ( int i = 0; i < N; i++ )
 		{
@@ -57,32 +76,27 @@ int writeScaledSamples( int nI, int lambda, int N, VectorXld lb, VectorXld ub, M
 	return( 0 );
 }
 
-int readResults( int nI, int lambda, VectorXld isColumnOutOfBounds, VectorXld penalty, VectorXld &arfitness )
+int readResults( const string& genDir, int nI, int lambda, VectorXld isColumnOutOfBounds, VectorXld penalty, VectorXld &arfitness )
 {
 	cout << "isColumnOutOfBounds" << nI << endl << isColumnOutOfBounds << endl << endl;
 	for ( int i = 0; i < lambda; i++ )
 	{
 		string line, lastLine;
 		stringstream ss;
-		stringstream fileName, nanFileName;
-/*		if ( isColumnOutOfBounds( i ) )
-		{
-			fileName << "fitness_feas_" << nI << "_" << ( i + 1 ) << ".txt";
-		}
-		else*/
-		{
-			fileName << "fitness_" << nI << "_" << ( i + 1 ) << ".txt";
-                        nanFileName << "nanTracer_" << nI << "_" << ( i + 1 ) << ".txt";
-		}
-		printf( "read results from file %s\n", fileName.str().c_str() );
-                lastLine = "nan"; // default, if fitness file does not exist
-		ifstream f( fileName.str().c_str() );
+		lastLine = "nan"; // default, if fitness file does not exist
+		stringstream baseName, nanBaseName;
+		baseName << "fitness_" << nI << "_" << ( i + 1 ) << ".txt";
+		nanBaseName << "nanTracer_" << nI << "_" << ( i + 1 ) << ".txt";
+        string fileName = makePath( genDir, baseName.str() );
+		string nanFileName = makePath( genDir, nanBaseName.str() );
+		printf( "read results from file %s\n", fileName.c_str() );
+		ifstream f( fileName );
 		while ( getline( f, line ) )
 		{
 			lastLine = line;
 		}
 		f.close();
-		if ( ( lastLine.find( "." ) == string::npos ) || existsFile( nanFileName.str().c_str() ) )
+		if ( ( lastLine.find( "." ) == string::npos ) || existsFile( nanFileName.c_str() ) )
 		{
 			arfitness( i ) = 1e12;
 		}
@@ -99,11 +113,12 @@ int readResults( int nI, int lambda, VectorXld isColumnOutOfBounds, VectorXld pe
 	return( 0 );
 }
 
-int writeAlgVars( int nI, int lambda, int N, int counteval, int eigeneval, long double sigma, VectorXld pc, VectorXld ps, MatrixXld C, MatrixXld B, MatrixXld D, MatrixXld arz, MatrixXld arx, bool boundWeightsInitialized, int valHistN, int valHistSize, VectorXld valHist, VectorXld gamma, VectorXld isColumnOutOfBounds, VectorXld penalty, VectorXld xmean )
+int writeAlgVars( const string& genDir, int nI, int lambda, int N, int counteval, int eigeneval, long double sigma, VectorXld pc, VectorXld ps, MatrixXld C, MatrixXld B, MatrixXld D, MatrixXld arz, MatrixXld arx, bool boundWeightsInitialized, int valHistN, int valHistSize, VectorXld valHist, VectorXld gamma, VectorXld isColumnOutOfBounds, VectorXld penalty, VectorXld xmean )
 {
-	stringstream fileName;
-	fileName << "algVars_" << ( nI + 1 ) << ".txt";
-	ofstream f( fileName.str().c_str() );
+	stringstream baseName;
+	baseName << "algVars_" << ( nI + 1 ) << ".txt";
+	string fileName = makePath( genDir, baseName.str() );
+	ofstream f( fileName );
 	f.precision( 43 );
 	// 1.) write counteval
 	f << "counteval" << nI << "\n"; 
@@ -216,13 +231,14 @@ int writeAlgVars( int nI, int lambda, int N, int counteval, int eigeneval, long 
 	return( 0 );
 }
 
-int readAlgVars( int nI, int lambda, int N, int *counteval, int *eigeneval, long double *sigma, VectorXld &pc, VectorXld &ps, MatrixXld &C, MatrixXld &B, MatrixXld &D, MatrixXld &arz, MatrixXld &arx, bool *boundWeightsInitialized, int valHistN, int *valHistSize, VectorXld &valHist, VectorXld &gamma, VectorXld &isColumnOutOfBounds, VectorXld &penalty, VectorXld &xmean_old )
+int readAlgVars( const string& genDir, int nI, int lambda, int N, int *counteval, int *eigeneval, long double *sigma, VectorXld &pc, VectorXld &ps, MatrixXld &C, MatrixXld &B, MatrixXld &D, MatrixXld &arz, MatrixXld &arx, bool *boundWeightsInitialized, int valHistN, int *valHistSize, VectorXld &valHist, VectorXld &gamma, VectorXld &isColumnOutOfBounds, VectorXld &penalty, VectorXld &xmean_old )
 {
 	string line;
 	stringstream ss;
-	stringstream fileName;
-	fileName << "algVars_" << nI << ".txt";
-	ifstream f( fileName.str().c_str() );
+	stringstream baseName;
+	baseName << "algVars_" << nI << ".txt";
+	string fileName = makePath( genDir, baseName.str() );
+	ifstream f( fileName );
 	// 1.) read counteval
 	getline( f, line );
 	getline( f, line );
@@ -370,20 +386,34 @@ int main( int argc, char* argv[] )
 	int N, lambda, maxIter, nI; // problem size, population size, maximum number of iterations, and current iteration
 	int seed; // random number seed
 	string functionName; // default fitness function
-	if ( argc < 3 ) 
-	{
-		printf( "program requires 2 command line arguments:\ninstance filename (string) and current iteration (int)\nthe associated file is supposed to contain:\n - problem size,\n - fitness function name,\n - lower and upper bounds\n\n" );
-	}
-	assert( argc == 3 );
+//	if ( argc < 3 ) 
+//	{
+//		printf( "program requires 2 command line arguments:\ninstance filename (string) and current iteration (int)\nthe associated file is supposed to contain:\n - problem size,\n - fitness function name,\n - lower and upper bounds\n\n" );
+//	}
+//	assert( argc == 3 );
 //	assert( argc == 2 );
+//	nI = atoi( argv[ 1 ] );
+//	string inFileName = argv[ 2 ];
+	string genDir; // default record keeping directory
+
+	if ( argc < 3 )
+	{
+		printf( "Usage:\n" );
+		printf( "  cmaes <iteration> <nIter.txt> [genDir]\n" );
+		exit( 1 );
+	}
+
 	nI = atoi( argv[ 1 ] );
 	string inFileName = argv[ 2 ];
+
+	if ( argc >= 4 )
+	{
+		genDir = argv[ 3 ];
+	}
+
 	string line;
 	stringstream ss;
-	ifstream inFile( inFileName.c_str() );
-//	inFile >> N;
-//	inFile >> lambda;
-//	inFile >> functionName;
+	ifstream inFile( inFileName );
 	getline( inFile, line );
 	getline( inFile, line );
 	ss.str( "" ); ss.clear(); ss << line;
@@ -471,17 +501,9 @@ int main( int argc, char* argv[] )
 	{
 		// initialize dynamic strategy parameters
 
-//		// vsa: original (random point in unit cube)
-//		xmean = VectorXld::Random( N );
-//		xmean = ( xmean.array() + 1 ) / 2;
-
 //		// vsa: center of unit cube
 		xmean = VectorXld::Zero( N );
 		xmean = xmean.array() + 0.5;
-
-		// vsa: (only for one run) fixing initial mean for parameter 2 and parameter 4
-//		xmean( 1 ) = 6.0 / 44.0; // => 10 in [4,48] 
-//		xmean( 3 ) = 1.0 / 3.9; // => 1 in [0.1,4]
 
 		sigma = 0.5;
 		pc = VectorXld::Zero( N );
@@ -508,11 +530,10 @@ int main( int argc, char* argv[] )
 	{
 		// read current dynamic strategy parameters and fitness values of
 		// previous iteration samples
-		readAlgVars( nI, lambda, N, &counteval, &eigeneval, &sigma, pc, ps, C, B, D, arz, arx, &boundWeightsInitialized, valHistN, &valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean_old );
-		readResults( nI, lambda, isColumnOutOfBounds, penalty, arfitness );
+		readAlgVars( genDir, nI, lambda, N, &counteval, &eigeneval, &sigma, pc, ps, C, B, D, arz, arx, &boundWeightsInitialized, valHistN, &valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean_old );
+		readResults( genDir, nI, lambda, isColumnOutOfBounds, penalty, arfitness );
 
 		// calculate already scaled deltas of [2] (11):
-		// VSA: to be debugged: the following depends on penalty terms, which is not intended to
 		long double val = ( percentile( arfitness, 75 ) - percentile( arfitness, 25 ) ) / N / C.diagonal().mean() / ( sigma * sigma ); 
 		if ( valHistSize < valHistN )
 		{
@@ -524,7 +545,6 @@ int main( int argc, char* argv[] )
 			valHist.head( valHistN - 1 ) = valHist.tail( valHistN - 1 );
 			valHist( valHistN - 1 ) = val;
 		}
-//		cout << "valHist" << endl << valHist << endl << endl;
 
 		// Sort by fitness and compute weighted mean into xmean
 		VectorXld arindex = VectorXld::LinSpaced( lambda, 0, lambda - 1 );
@@ -577,18 +597,11 @@ int main( int argc, char* argv[] )
 			cout << "diag( D )'" << nI << endl << D.diagonal().transpose() << endl << endl;
 		}
 		// Escape flat fitness, or better terminate?
-//		long double eps = 1e-12; // vsa: original
 		long double eps = 1e-5; // vsa: adaption
 		// vsa debugging 18.09.2017: use i70 to consider small lambda!
 		int i70 = ceil( 0.7 * lambda );
 		if ( i70 >= lambda ) i70 = lambda - 1; // case: small lambda!
-		if ( ( 1 - eps ) * arfitness( i70 ) < arfitness( 0 ) && arfitness( 0 ) < ( 1 + eps ) * arfitness( i70 ) )
-		{
-			terminate = 1;
-//			sigma = sigma * exp( 0.2 + cs / damps );
-//			cout << "warning: flat fitness, consider reformulating the objective" << endl;
-//			cout << "arfitness( 1 ) =" << arfitness( 1 ) << "and arfitness( ceil( 0.7 * lambda ) ) =" << arfitness( ceil( 0.7 * lambda ) ) << endl;
-		}
+		if ( ( 1 - eps ) * arfitness( i70 ) < arfitness( 0 ) && arfitness( 0 ) < ( 1 + eps ) * arfitness( i70 ) ) terminate = 1;
 		cout << counteval << ": " << arfitness( 0 ) << endl;
 	} // else ( nI > 0 )
 
@@ -650,7 +663,6 @@ int main( int argc, char* argv[] )
 		VectorXld xi( N );// scaling vector
 		xi = ( 0.9 * ( C.diagonal().array().log() - C.diagonal().array().log().mean() ) ).exp(); 
 		penalty = ( gamma.array() / xi.array() ).matrix().transpose() * ( ( arx_feas - arx ).array() * ( arx_feas - arx ).array() ).matrix(); // vsa: original
-//		penalty = 2 * ( gamma.array() / xi.array() ).matrix().transpose() * ( ( arx_feas - arx ).array() * ( arx_feas - arx ).array() ).matrix(); // vsa: multiplying original with constant factor to increase boundary precision
 //		cout << "arfitness_feas" << endl << arfitness_feas << endl << endl;
 //		cout << "gamma" << endl << gamma << endl << endl;
 		cout << "xi" << endl << xi << endl << endl;
@@ -658,8 +670,10 @@ int main( int argc, char* argv[] )
 		cout << "penalty" << endl << penalty << endl << endl;
 	} // mean out of bounds case
 
-	writeScaledSamples( nI, lambda, N, lb, ub, arx, arx_feas, isColumnOutOfBounds );
-	writeAlgVars( nI, lambda, N, counteval, eigeneval, sigma, pc, ps, C, B, D, arz, arx, boundWeightsInitialized, valHistN, valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean );
+	writeScaledSamples( genDir, nI, lambda, N, lb, ub, arx, arx_feas, isColumnOutOfBounds );
+	writeAlgVars( genDir, nI, lambda, N, counteval, eigeneval, sigma, pc, ps, C, B, D, arz, arx, boundWeightsInitialized, valHistN, valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean );
+	writeMuDB( genDir, nI, N, xmean, sigma, D, B ); // data for illustrations with standard deviation ellipses
+
 	// update nIter.txt
 	ofstream f;
 	f.open( "nIter.txt", ofstream::out | ofstream::app );
