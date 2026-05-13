@@ -171,6 +171,14 @@ long double diffpow( VectorXld x )
 	return( v.sum() );
 } 
   
+long double linear( VectorXld x )
+{
+	int n = x.size();
+	long double sum = 0;
+	for ( int i = 0; i < n; i++ ) sum -= x( i );
+	return( sum );
+}
+
 
 
 long double rastrigin10( VectorXld x )
@@ -189,13 +197,7 @@ long double rastrigin10( VectorXld x )
 
 int main( int argc, char *argv[] )
 {
-    // command line arguments: nPar nIter nSession fName
 	assert( argc == 4 );
-//	int nParams = atoi( argv[ 1 ] );
-//	string fName = argv[ 2 ];
-//	int nIter = atoi( argv[ 3 ] );
-//	int nSession = atoi( argv[ 4 ] );
-//	int kind = atoi( argv[ 5 ] );
 	string instanceFileName = argv[ 1 ];
 	string inFileName = argv[ 2 ];
 	string outFileName = argv[ 3 ];
@@ -247,6 +249,7 @@ int main( int argc, char *argv[] )
 	else if ( fName == "parabR" ) obj = parabR( x );
 	else if ( fName == "sharpR" ) obj = sharpR( x );
 	else if ( fName == "diffpow" ) obj = diffpow( x );
+	else if ( fName == "linear" ) obj = linear( x );
 	else if ( fName == "himmelblau" ) obj = himmelblau( x );
 	else obj = rosenbrock( x );
 //	ss.str( "" ); ss.clear();

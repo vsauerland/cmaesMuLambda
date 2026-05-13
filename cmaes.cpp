@@ -386,30 +386,16 @@ int main( int argc, char* argv[] )
 	int N, lambda, maxIter, nI; // problem size, population size, maximum number of iterations, and current iteration
 	int seed; // random number seed
 	string functionName; // default fitness function
-//	if ( argc < 3 ) 
-//	{
-//		printf( "program requires 2 command line arguments:\ninstance filename (string) and current iteration (int)\nthe associated file is supposed to contain:\n - problem size,\n - fitness function name,\n - lower and upper bounds\n\n" );
-//	}
-//	assert( argc == 3 );
-//	assert( argc == 2 );
-//	nI = atoi( argv[ 1 ] );
-//	string inFileName = argv[ 2 ];
-	string genDir; // default record keeping directory
 
 	if ( argc < 3 )
 	{
 		printf( "Usage:\n" );
-		printf( "  cmaes <iteration> <nIter.txt> [genDir]\n" );
+		printf( "  cmaes <iteration> <nIter.txt>\n" );
 		exit( 1 );
 	}
 
 	nI = atoi( argv[ 1 ] );
 	string inFileName = argv[ 2 ];
-
-	if ( argc >= 4 )
-	{
-		genDir = argv[ 3 ];
-	}
 
 	string line;
 	stringstream ss;
@@ -530,6 +516,7 @@ int main( int argc, char* argv[] )
 	{
 		// read current dynamic strategy parameters and fitness values of
 		// previous iteration samples
+		string genDir = "gen" + itos( nI );
 		readAlgVars( genDir, nI, lambda, N, &counteval, &eigeneval, &sigma, pc, ps, C, B, D, arz, arx, &boundWeightsInitialized, valHistN, &valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean_old );
 		readResults( genDir, nI, lambda, isColumnOutOfBounds, penalty, arfitness );
 
@@ -670,6 +657,7 @@ int main( int argc, char* argv[] )
 		cout << "penalty" << endl << penalty << endl << endl;
 	} // mean out of bounds case
 
+	genDir = gen + itos( nI + 1 );
 	writeScaledSamples( genDir, nI, lambda, N, lb, ub, arx, arx_feas, isColumnOutOfBounds );
 	writeAlgVars( genDir, nI, lambda, N, counteval, eigeneval, sigma, pc, ps, C, B, D, arz, arx, boundWeightsInitialized, valHistN, valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean );
 	writeMuDB( genDir, nI, N, xmean, sigma, D, B ); // data for illustrations with standard deviation ellipses
