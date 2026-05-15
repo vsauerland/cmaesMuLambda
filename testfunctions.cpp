@@ -197,7 +197,6 @@ long double rastrigin10( VectorXld x )
 
 int main( int argc, char *argv[] )
 {
-	assert( argc == 4 );
 	string instanceFileName = argv[ 1 ];
 	string inFileName = argv[ 2 ];
 	string outFileName = argv[ 3 ];

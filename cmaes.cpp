@@ -390,12 +390,14 @@ int main( int argc, char* argv[] )
 	if ( argc < 3 )
 	{
 		printf( "Usage:\n" );
-		printf( "  cmaes <iteration> <nIter.txt>\n" );
+		printf( "  cmaes <iteration> <nIter.txt> [useGenDirs]\n" );
 		exit( 1 );
 	}
 
 	nI = atoi( argv[ 1 ] );
 	string inFileName = argv[ 2 ];
+    bool useGenDirs = false;
+	if ( argc >= 4 ) useGenDirs = bool( atoi( argv[ 3 ] ) );
 
 	string line;
 	stringstream ss;
@@ -516,9 +518,10 @@ int main( int argc, char* argv[] )
 	{
 		// read current dynamic strategy parameters and fitness values of
 		// previous iteration samples
-		string genDir = "gen" + itos( nI );
-		readAlgVars( genDir, nI, lambda, N, &counteval, &eigeneval, &sigma, pc, ps, C, B, D, arz, arx, &boundWeightsInitialized, valHistN, &valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean_old );
-		readResults( genDir, nI, lambda, isColumnOutOfBounds, penalty, arfitness );
+		string readGenDir;
+		if ( useGenDirs ) readGenDir = "gen" + to_string( nI ); else readGenDir = ".";
+		readAlgVars( readGenDir, nI, lambda, N, &counteval, &eigeneval, &sigma, pc, ps, C, B, D, arz, arx, &boundWeightsInitialized, valHistN, &valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean_old );
+		readResults( readGenDir, nI, lambda, isColumnOutOfBounds, penalty, arfitness );
 
 		// calculate already scaled deltas of [2] (11):
 		long double val = ( percentile( arfitness, 75 ) - percentile( arfitness, 25 ) ) / N / C.diagonal().mean() / ( sigma * sigma ); 
@@ -657,10 +660,11 @@ int main( int argc, char* argv[] )
 		cout << "penalty" << endl << penalty << endl << endl;
 	} // mean out of bounds case
 
-	genDir = gen + itos( nI + 1 );
-	writeScaledSamples( genDir, nI, lambda, N, lb, ub, arx, arx_feas, isColumnOutOfBounds );
-	writeAlgVars( genDir, nI, lambda, N, counteval, eigeneval, sigma, pc, ps, C, B, D, arz, arx, boundWeightsInitialized, valHistN, valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean );
-	writeMuDB( genDir, nI, N, xmean, sigma, D, B ); // data for illustrations with standard deviation ellipses
+	string writeGenDir;
+	if ( useGenDirs ) writeGenDir = "gen" + to_string( nI + 1 ); else writeGenDir = ".";
+	writeScaledSamples( writeGenDir, nI, lambda, N, lb, ub, arx, arx_feas, isColumnOutOfBounds );
+	writeAlgVars( writeGenDir, nI, lambda, N, counteval, eigeneval, sigma, pc, ps, C, B, D, arz, arx, boundWeightsInitialized, valHistN, valHistSize, valHist, gamma, isColumnOutOfBounds, penalty, xmean );
+	writeMuDB( writeGenDir, nI, N, xmean, sigma, D, B ); // data for illustrations with standard deviation ellipses
 
 	// update nIter.txt
 	ofstream f;

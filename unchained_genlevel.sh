@@ -10,7 +10,7 @@ do
         genDir="gen$gen"
         mkdir -p "$genDir"
 
-        ./cmaes "$nIter" nIter.txt > "serial_${nIter}.log" || exit
+        ./cmaes "$nIter" nIter.txt 1 > "$genDir/serial_${nIter}.log" || exit
 
         for nSession in $(seq 1 "$numSessions")
         do

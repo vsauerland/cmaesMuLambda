@@ -1,0 +1,78 @@
+#!/bin/bash
+#SBATCH --output=parallel.out
+#SBATCH --time=00:01:59
+#SBATCH --job-name=testfunc
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=standard96s:test
+
+export SLURM_CPU_BIND=none
+
+echo $0
+
+# Get operational parameters form file nIter.txt
+numSessions=$(head -4 nIter.txt | tail -1 | awk '{print $1}')
+maxIter=$(head -5 nIter.txt | tail -1 | awk '{print $1}')
+nIter=$(tail -1 nIter.txt | awk '{print $1}')
+nodesPerSession=$(($SLURM_NNODES / $numSessions))
+
+genDir="gen$nIter"
+
+# Generate machine files which contain the nodes to use by each model simulation
+MYNODES=$(srun -l bash -c 'hostname' | sort | awk '{print $2 ":96"}' | sort -u)
+for nSession in $(seq 1 $numSessions)
+do
+    memberDir="$genDir/member$nSession"
+    mkdir -p "$memberDir"
+
+    echo "$MYNODES" | head -n $(($nodesPerSession * $nSession)) | tail -n $nodesPerSession > "$memberDir/hosts${nSession}.txt"
+done
+
+# print scheduling informations
+echo "Running on hosts: $SLURM_NODELIST"
+echo "Running on $SLURM_NNODES nodes."
+echo "Running $SLURM_NTASKS tasks."
+echo "Using $nodesPerSession nodes for each model simulation"
+echo "Using the following nodes:"
+echo "$MYNODES"
+
+# start numSessions model simulations in parallel
+for nSession in $(seq 1 $numSessions)
+do
+        memberDir="$genDir/member$nSession"
+        paramFile="$genDir/parameters_${nIter}_${nSession}.txt"
+        fitnessFile="$genDir/fitness_${nIter}_${nSession}.txt"
+
+        cp "$paramFile" "$memberDir/parameters.txt"
+
+        (
+                cd "$memberDir" || exit
+
+                ../../testfunctions \
+                        ../../nIter.txt \
+                        parameters.txt \
+                        fitness.txt \
+                        > "parallel_${nIter}_${nSession}.log"
+        ) &
+done
+
+wait
+
+# copy fitness values back to generation folder
+for nSession in $(seq 1 $numSessions)
+do
+        memberDir="$genDir/member$nSession"
+        fitnessFile="$genDir/fitness_${nIter}_${nSession}.txt"
+
+        if [ -s "$memberDir/fitness.txt" ]; then
+                cp "$memberDir/fitness.txt" "$fitnessFile"
+        fi
+done
+
+if [ "$nIter" -lt "$maxIter" ]; then
+        sbatch serial_genlevel.job
+fi
+
+exit
+

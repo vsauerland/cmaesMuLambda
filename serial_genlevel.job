@@ -20,14 +20,19 @@ maxIter=$(head -5 nIter.txt | tail -1 | awk '{print $1}')
 nIter=$(tail -1 nIter.txt | awk '{print $1}')
 terminate=$(tail -1 nIter.txt | awk '{print $3}')
 
-./cmaes $nIter nIter.txt > serial_$nIter.log
+gen=$((nIter+1))
+genDir="gen$gen"
+mkdir -p "$genDir"
+
+./cmaes "$nIter" nIter.txt 1 > "$genDir/serial_${nIter}.log"
 
 wait
 
 if [ "$?" -eq 0 ]; then
     if [ "$nIter" -lt "$maxIter" ]; then
         if [ "$terminate" -lt 1 ]; then
-            sbatch parallel.job
+            sbatch parallel_genlevel.job
         fi
     fi
 fi
+
