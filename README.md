@@ -7,15 +7,22 @@ box constraints using C++ and the Eigen package for matrix calculations.
 We follow [1] for the pure CMAES extended by a "boundary handling" as decribed
 in [2]. Both papers are linked on 'The CMA Evolution Strategy' Website [3]
 
+The software was first implemented in 2016 and extended here by record keeping
+alternatives.
+
 
 PURPOSE
 -------
 
-This version is intended to optimize parameters of ocean models.
+This implementtion is intended to optimize parameters of ocean models.
 It is most suitable, if the running time is approximately the same
 for different parameter vectors.
-Here, we don't provide ocean models but benchmark functions
+Here, we don't provide an example ocean model but benchmark functions
 together with a corresponding operational parameter file "nIter0.dat"
+
+Originally, a single folder was used for file communication between cmaes
+and model runs. Here, we add the option to use subfolders for each iteration
+and subsubfolders for each iteration's member (model run).
 
 
 APPROACH
@@ -93,6 +100,12 @@ Also in the case of an iterruption caused by technical problems, optimization
 can be continued at the point it has been interrupted. In that case, the last
 iteration in "nIter.txt" must be deleted if the fitness values of that iteration
 have not all been written to the corresponding files!
+
+NOTE: For tests on local mashines, you can use the bash script "unchained.sh".
+      For both, job files and bash script, we also provide versions to support
+      record keeping using iteration and member subfolders:
+      "serial_genlevel.job", "parallel_genlevel.job", "unchained_genlevel.sh".
+
 
 LITERATURE
 ----------
