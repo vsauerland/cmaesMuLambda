@@ -64,6 +64,12 @@ The package consists of the files
 - nIter0.dat            // sample interface file (with operational settings)
 - serial.job            // serial job file (starting CMAES optimizer)
 - parallel.job          // parallel job file (starting parallel model runs)
+- unchained.sh          // alterates CMAES and model simulations in one script
+- serial_genlevel.job   // this job creates a folder gen_i for generation i
+- parallel_genlevel.job // this job creates/uses gen_i/member_j subfolders
+                           for model simulation j of generation i
+- unchained_genlevel.sh // script creates/uses subsubfolders per model run
+                           like the corresponding "genlevel" job files do
 
 In order to generate executables, the "Eigen" algebra package must be available
 on the system. It can be downloaded from
@@ -103,11 +109,11 @@ can be continued at the point it has been interrupted. In that case, the last
 iteration in "nIter.txt" must be deleted if the fitness values of that iteration
 have not all been written to the corresponding files!
 
-NOTES: For tests on local machines, you can use the bash script "unchained.sh".
+For tests on local machines, you can use the bash script "unchained.sh".
 
-       For both, job files and bash script, we also provide versions to support
-       record keeping using iteration and member subfolders:
-       "serial_genlevel.job", "parallel_genlevel.job", "unchained_genlevel.sh".
+NOTE: For both, job files and bash script, we also provide versions to support
+      record keeping using generation and member subfolders:
+      "serial_genlevel.job", "parallel_genlevel.job", "unchained_genlevel.sh".
 
 
 LITERATURE
